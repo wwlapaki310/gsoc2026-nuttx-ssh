@@ -1,0 +1,60 @@
+# Kconfig for Dropbear SSH on NuttX
+# Place this in nuttx-apps/netutils/dropbear/Kconfig
+
+menu "Dropbear SSH"
+
+config NETUTILS_DROPBEAR
+	bool "Dropbear SSH server/client"
+	default n
+	depends on NET && NET_TCP && DEV_URANDOM
+	---help---
+		Port of Dropbear SSH to NuttX.
+		Enables both SSH server (dropbear) and SSH client (dbclient).
+		Requires TCP networking and /dev/urandom.
+
+if NETUTILS_DROPBEAR
+
+config NETUTILS_DROPBEAR_SERVER
+	bool "Enable SSH server"
+	default y
+	depends on PSEUDOTERM
+	---help---
+		Run an SSH server on the board.
+		Allows remote login to NuttX shell via SSH.
+		Requires CONFIG_PSEUDOTERM for PTY support.
+
+config NETUTILS_DROPBEAR_CLIENT
+	bool "Enable SSH client"
+	default y
+	---help---
+		Build dbclient: SSH client that can connect to remote Linux hosts.
+		Adds 'ssh' command to NSH.
+
+config NETUTILS_DROPBEAR_PORT
+	int "SSH server listen port"
+	default 22
+	depends on NETUTILS_DROPBEAR_SERVER
+	---help---
+		TCP port for the SSH server to listen on.
+		Use 2222 if running as non-root on Linux sim.
+
+config NETUTILS_DROPBEAR_PASSWORD
+	string "Default SSH password (testing only)"
+	default "nuttx"
+	depends on NETUTILS_DROPBEAR_SERVER
+	---help---
+		Hardcoded password for SSH login during development.
+		WARNING: Change this before deploying in production.
+		Future: use /etc/passwd via CONFIG_LIBC_PASSWD.
+
+config NETUTILS_DROPBEAR_STACKSIZE
+	int "SSH connection handler stack size (bytes)"
+	default 16384
+	depends on NETUTILS_DROPBEAR
+	---help---
+		Stack size for each SSH connection handler pthread.
+		16 KB is a safe minimum; increase if you see stack overflows.
+
+endif # NETUTILS_DROPBEAR
+
+endmenu

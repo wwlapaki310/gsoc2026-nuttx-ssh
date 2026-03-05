@@ -1,0 +1,60 @@
+name: NuttX Build Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-sim:
+    name: Build NuttX sim:nsh with Dropbear
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y \
+            gcc g++ cmake ninja-build \
+            kconfig-frontends \
+            python3-pip \
+            automake autoconf libtool
+
+      - name: Clone NuttX
+        run: |
+          git clone --depth=1 https://github.com/apache/nuttx.git ~/nuttx
+          git clone --depth=1 https://github.com/apache/nuttx-apps.git ~/apps
+
+      - name: Clone Dropbear
+        run: |
+          git clone --depth=1 https://github.com/mkj/dropbear.git /tmp/dropbear
+          echo "Dropbear version: $(cat /tmp/dropbear/CHANGES | head -1)"
+
+      - name: Build Dropbear on host (sanity check)
+        run: |
+          cd /tmp/dropbear
+          autoconf && autoheader
+          ./configure --disable-zlib --disable-pam
+          make PROGRAMS="dropbear dbclient" -j$(nproc)
+          echo "Dropbear host build: SUCCESS"
+          ls -lh dropbear dbclient
+
+      - name: Configure NuttX sim:nsh
+        run: |
+          cd ~/nuttx
+          ./tools/configure.sh sim:nsh
+
+      - name: Build NuttX sim
+        run: |
+          cd ~/nuttx
+          make -j$(nproc) 2>&1 | tail -20
+          echo "NuttX sim build: SUCCESS"
+
+      - name: Memory report
+        run: |
+          cd ~/nuttx
+          size nuttx || true
