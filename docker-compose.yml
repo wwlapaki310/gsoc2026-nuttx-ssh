@@ -1,0 +1,50 @@
+# =============================================================================
+# docker-compose.yml — NuttX SSH 開発環境
+#
+# 使い方:
+#   docker compose up            # NuttX を QEMU で起動
+#   docker compose run dev bash  # 開発用インタラクティブシェル
+#   docker compose run dev make  # NuttX を再ビルド
+# =============================================================================
+services:
+
+  # NuttX を QEMU で起動するサービス
+  nuttx:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: gsoc2026-nuttx-ssh:latest
+    container_name: nuttx-qemu
+    # ホスト2222 → コンテナ22 (将来のSSHテスト用)
+    ports:
+      - "2222:22"
+    # シリアルコンソール (QEMU の -nographic)
+    stdin_open: true
+    tty: true
+    command: ["/bin/bash", "/opt/nuttx/docker/docker-entrypoint.sh"]
+    volumes:
+      # このリポジトリを /workspace にマウント (ポーティングコード編集用)
+      - .:/workspace
+      # NuttXビルドキャッシュ (再ビルドを高速化)
+      - nuttx-build:/opt/nuttx
+
+  # 開発用シェル (ビルド・編集・デバッグ)
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: gsoc2026-nuttx-ssh:latest
+    container_name: nuttx-dev
+    stdin_open: true
+    tty: true
+    command: ["/bin/bash"]
+    volumes:
+      - .:/workspace
+      - nuttx-build:/opt/nuttx
+    environment:
+      - NUTTX_DIR=/opt/nuttx
+      - APPS_DIR=/opt/apps
+      - DROPBEAR_DIR=/opt/dropbear
+
+volumes:
+  nuttx-build:
