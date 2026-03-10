@@ -14,8 +14,6 @@ RUN apt-get update -q && apt-get install -y --no-install-recommends \
     gcc g++ \
     gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi \
     qemu-system-arm \
-    # kconfig-frontends: kconfig-tweak コマンドのために必要
-    # （.config を直接書き換えるツール。Kconfig 構文解析はしないので問題なし）
     kconfig-frontends \
     autoconf automake libtool \
     python3 python3-pip python3-pyelftools \
@@ -26,15 +24,12 @@ RUN apt-get update -q && apt-get install -y --no-install-recommends \
 
 # --- kconfiglib をインストール ---
 # NuttX 公式推奨の Python 製 Kconfig 実装。
-# pip でインストールすると /usr/local/bin/ に olddefconfig 等が入る。
-# PATH では /usr/local/bin が /usr/bin より優先されるため、
-# apt の kconfig-frontends の olddefconfig より kconfiglib が優先して使われる。
-# → NuttX の Kconfig 拡張構文（tricore 等）を正しく解析できる。
+# /usr/local/bin に入るため PATH 順で apt 版より優先される。
 RUN pip3 install --break-system-packages kconfiglib
 
-# PATH確認: /usr/local/bin が /usr/bin より前に来ることを確認
-RUN echo "olddefconfig: $(which olddefconfig)" && \
-    echo "kconfig-tweak: $(which kconfig-tweak)"
+# PATH 確認: kconfiglib が優先されていることを確認
+RUN echo "olddefconfig -> $(which olddefconfig)" && \
+    echo "kconfig-tweak -> $(which kconfig-tweak)"
 
 # --- NuttX ソースを取得 ---
 WORKDIR /opt
