@@ -14,13 +14,19 @@ RUN apt-get update -q && apt-get install -y --no-install-recommends \
     gcc g++ \
     gcc-arm-none-eabi binutils-arm-none-eabi \
     qemu-system-arm \
-    kconfig-frontends \
+    # kconfig-frontends は古くて NuttX の Kconfig 構文に非対応のため除外
+    # 代わりに Python製の kconfiglib を使う（後述）
     autoconf automake libtool \
     python3 python3-pip python3-pyelftools \
     gdb-multiarch \
     iproute2 iputils-ping \
     wget curl vim less \
   && rm -rf /var/lib/apt/lists/*
+
+# --- kconfiglib をインストール ---
+# NuttX 公式推奨の Python 製 Kconfig 実装。
+# apt の kconfig-frontends より新しく、NuttX の Kconfig 構文に完全対応している。
+RUN pip3 install --break-system-packages kconfiglib
 
 # --- NuttX ソースを取得 ---
 WORKDIR /opt
