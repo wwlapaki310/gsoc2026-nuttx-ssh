@@ -27,7 +27,7 @@ RUN apt-get update -q && apt-get install -y --no-install-recommends \
 # /usr/local/bin に入るため PATH 順で apt 版より優先される。
 RUN pip3 install --break-system-packages kconfiglib
 
-# PATH 確認: kconfiglib が優先されていることを確認
+# PATH 確認
 RUN echo "olddefconfig -> $(which olddefconfig)" && \
     echo "kconfig-tweak -> $(which kconfig-tweak)"
 
@@ -39,10 +39,26 @@ RUN git clone --depth=1 --branch nuttx-12.7.0 https://github.com/apache/nuttx.gi
 # --- Dropbear ソース (ポーティング作業用) ---
 RUN git clone --depth=1 https://github.com/mkj/dropbear.git /opt/dropbear
 
-# --- qemu-armv7a:nsh をビルド ---
+# --- qemu-armv7a:nsh をベースに設定 ---
 WORKDIR /opt/nuttx
-RUN ./tools/configure.sh qemu-armv7a:nsh && \
-    bash -c 'set -o pipefail; make -j$(nproc) 2>&1 | tail -20'
+RUN ./tools/configure.sh qemu-armv7a:nsh
+
+# --- ネットワーク関連の設定を有効化 ---
+# kconfig-tweak は .config の指定行を書き換えるだけのツール。
+# Kconfig 構文の解析をしないので apt 版で問題なし。
+# kconfiglib（pip）は make の内部で呼ばれる olddefconfig が担当する。
+RUN kconfig-tweak --enable  CONFIG_NET            && \
+    kconfig-tweak --enable  CONFIG_NET_IPv4        && \
+    kconfig-tweak --enable  CONFIG_NET_TCP         && \
+    kconfig-tweak --enable  CONFIG_NET_UDP         && \
+    kconfig-tweak --enable  CONFIG_VIRTIO          && \
+    kconfig-tweak --enable  CONFIG_VIRTIO_NET      && \
+    kconfig-tweak --enable  CONFIG_NETUTILS_IFCONFIG && \
+    kconfig-tweak --enable  CONFIG_NETUTILS_PING   && \
+    make olddefconfig 2>&1 | tail -5
+
+# --- ビルド ---
+RUN bash -c 'set -o pipefail; make -j$(nproc) 2>&1 | tail -20'
 
 # --- バイナリ確認 ---
 RUN file /opt/nuttx/nuttx && ls -lh /opt/nuttx/nuttx
